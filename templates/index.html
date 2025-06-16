@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manhattan</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1></i> Búsqueda informada</h1>
+            <p class="subtitle">Implementación de la distancia de manhattan como heurística en el cálculo de rutas de carreteras.</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Panel de control -->
+            <div class="control-panel">
+                <div class="panel-section">
+                    <div class="section-header" data-section="load-map">
+                        <h2> Cargar Mapa <i class="fas fa-chevron-down"></i></h2>
+                    </div>
+                    <div class="section-content" id="load-map-content">
+                        <div class="form-group">
+                            <label for="place-name">Lugar:</label>
+                            <input type="text" id="place-name" placeholder="Ej: Jilotepec, México" value="Jilotepec, México">
+                        </div>
+                        <button id="load-map-btn" class="btn btn-primary">
+                            <i class="fas fa-download"></i> Cargar Mapa
+                        </button>
+                        <div id="map-stats" class="stats-box hidden">
+                            <p><span class="stat-label">Nodos:</span> <span id="node-count">0</span></p>
+                            <p><span class="stat-label">Aristas:</span> <span id="edge-count">0</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <div class="section-header" data-section="route-settings">
+                        <h2> Configuración de Ruta <i class="fas fa-chevron-down"></i></h2>
+                    </div>
+                    <div class="section-content" id="route-settings-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="start-lat">Inicio (Lat):</label>
+                                <input type="number" step="0.000001" id="start-lat" placeholder="Haz clic en el mapa">
+                                <button id="set-start-btn" class="btn btn-small">
+                                    <i class="fas fa-map-marker-alt"></i> Seleccionar en mapa
+                                </button>
+                            </div>
+                            <div class="form-group">
+                                <label for="start-lon">Inicio (Lon):</label>
+                                <input type="number" step="0.000001" id="start-lon" readonly>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="end-lat">Fin (Lat):</label>
+                                <input type="number" step="0.000001" id="end-lat" placeholder="Haz clic en el mapa">
+                                <button id="set-end-btn" class="btn btn-small">
+                                    <i class="fas fa-map-marker-alt"></i> Seleccionar en mapa
+                                </button>
+                            </div>
+                            <div class="form-group">
+                                <label for="end-lon">Fin (Lon):</label>
+                                <input type="number" step="0.000001" id="end-lon" readonly>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="optimization">Optimización:</label>
+                            <select id="optimization">
+                                <option value="balanced">Balanceada</option>
+                                <option value="shortest">Más corta</option>
+                                <option value="fastest">Más rápida</option>
+                                <option value="safest">Más segura</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="heuristic">Heurística:</label>
+                            <select id="heuristic">
+                                <option value="euclidean">Euclidiana</option>
+                                <option value="manhattan">Manhattan</option>
+                            </select>
+                        </div>
+
+                        <div class="weights-sliders">
+                            <div class="form-group">
+                                <label for="distance-weight">Distancia (<span id="distance-value">40</span>%):</label>
+                                <input type="range" id="distance-weight" min="0" max="100" value="40">
+                            </div>
+                            <div class="form-group">
+                                <label for="time-weight">Tiempo (<span id="time-value">30</span>%):</label>
+                                <input type="range" id="time-weight" min="0" max="100" value="30">
+                            </div>
+                            <div class="form-group">
+                                <label for="safety-weight">Seguridad (<span id="safety-value">30</span>%):</label>
+                                <input type="range" id="safety-weight" min="0" max="100" value="30">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <div class="section-header" data-section="safety-points">
+                        <h2> Puntos de Seguridad <i class="fas fa-chevron-down"></i></h2>
+                    </div>
+                    <div class="section-content" id="safety-points-content">
+                        <div id="safety-points-container">
+                            <!-- Puntos de seguridad se añadirán aquí -->
+                        </div>
+                        <div class="safety-point-buttons">
+                            <button id="add-safety-point" class="btn btn-secondary">
+                                <i class="fas fa-plus"></i> Añadir Punto
+                            </button>
+                            <button id="select-safety-point" class="btn btn-secondary">
+                                <i class="fas fa-map-marker-alt"></i> Seleccionar en Mapa
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-actions">
+                    <button id="new-calculation-btn" class="btn btn-danger">
+                        Nuevo Cálculo
+                    </button>
+                    <button id="calculate-route-btn" class="btn btn-primary">
+                        Calcular Ruta
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mapa y Resultados -->
+            <div class="results-container">
+                <div id="map" class="map-container"></div>
+
+                <div class="results-panel">
+                    <div id="results-content" class="hidden">
+                        <div class="route-summary">
+                            <h3>Resumen de Ruta</h3>
+                            <div class="summary-grid">
+                                <div class="summary-item">
+                                    <span class="summary-label">Distancia:</span>
+                                    <span id="total-distance" class="summary-value">-</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">Tiempo:</span>
+                                    <span id="total-time" class="summary-value">-</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">Seguridad:</span>
+                                    <span id="safety-level" class="summary-value">-</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span class="summary-label">Optimización:</span>
+                                    <span id="optimization-type" class="summary-value">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="route-segments">
+                            <h3>Segmentos de Ruta</h3>
+                            <div id="segments-list" class="segments-list">
+                                <!-- Segmentos se añadirán aquí -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="loading-indicator" class="loading hidden">
+                        <div class="spinner"></div>
+                        <p>Calculando ruta...</p>
+                        <div class="processing-status hidden" id="processing-status">
+                            <i class="fas fa-circle-notch fa-spin processing-icon"></i>
+                            <span>Procesando, por favor espere...</span>
+                        </div>
+                    </div>
+
+                    <div id="error-message" class="error-message hidden">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p id="error-text"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>
