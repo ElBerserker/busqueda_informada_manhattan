@@ -8,8 +8,6 @@ shapely==2.0.1
 requests==2.31.0
 scikit-learn==1.7.0
 gunicorn==21.2.0
-setuptools>=65.0
-numpy==1.24.3
-wheel
+
 
 
